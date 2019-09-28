@@ -211,10 +211,10 @@ ImageNet weights. Used metric is AP on IoU=0.50:0.95.
         zlib                      1.2.11               h7b6447c_3  
         zstd                      1.3.7                h0b5b093_0  
  
- # Train (Nobrand)
+ ### Train (Nobrand)
  
         python nobrand_train.py train --dataset=dataset_no
        
- # Detect (Nobrand)
+ ### Detect (Nobrand)
  
         python nobrand_detect_image.py
