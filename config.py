@@ -46,15 +46,18 @@ class Config(object):
     # might take a while, so don't set this too small to avoid spending
     # a lot of time on validation stats.
     
+    val_dir = "{}/{}".format("dataset_no", "val")
+    train_dir = "{}/{}".format("dataset_no","train")
+
     #STEPS_PER_EPOCH = 1000
-    STEPS_PER_EPOCH = 100
+    STEPS_PER_EPOCH =  len(os.walk(train_dir).__next__()[2])
     
     # Number of validation steps to run at the end of every training epoch.
     # A bigger number improves accuracy of validation stats, but slows
     # down the training.
     
     #VALIDATION_STEPS = 50
-    VALIDATION_STEPS = 100
+    VALIDATION_STEPS = len(os.walk(val_dir).__next__()[2])
 
     # The strides of each layer of the FPN Pyramid. These values
     # are based on a Resnet101 backbone.
@@ -160,8 +163,9 @@ class Config(object):
         else:
             self.BATCH_SIZE = self.IMAGES_PER_GPU
 
-        # Adjust step size based on batch size
-        self.STEPS_PER_EPOCH = self.BATCH_SIZE * self.STEPS_PER_EPOCH
+        # Adjust step size based on batch size //????
+        #self.STEPS_PER_EPOCH = self.BATCH_SIZE * self.STEPS_PER_EPOCH # 기존 코드 1개의 에폭당 몇번을 반복할 지는 데이터의 개수/ batch size 라고 판단됨.  
+        self.STEPS_PER_EPOCH = math.ceil(self.STEPS_PER_EPOCH / self.BATCH_SIZE) 
 
         # Input image size
         self.IMAGE_SHAPE = np.array(
