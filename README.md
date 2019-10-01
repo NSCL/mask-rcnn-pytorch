@@ -213,7 +213,7 @@ ImageNet weights. Used metric is AP on IoU=0.50:0.95.
  
  ### Train (Nobrand)
  
-        python nobrand_train.py train --dataset=dataset_no
+        python nobrand_train.py train --dataset dataset_no
        
  ### Detect (Nobrand)
  
