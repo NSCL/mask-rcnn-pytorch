@@ -215,9 +215,15 @@ ImageNet weights. Used metric is AP on IoU=0.50:0.95.
  
         python nobrand_train.py train --dataset dataset_no
        
- ### Detect (Nobrand)
+ ### Detect image(random) (Nobrand)
  
         python nobrand_detect_image.py
+                or
+        python nobrand_detect_image.py --visualize image
+ 
+ ### Detect webcam (Nobrand)
+ 
+        python nobrand_detect_image.py --visualize webcam
 
 ### Reference
 -  https://github.com/multimodallearning/pytorch-mask-rcnn
