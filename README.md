@@ -218,3 +218,6 @@ ImageNet weights. Used metric is AP on IoU=0.50:0.95.
  ### Detect (Nobrand)
  
         python nobrand_detect_image.py
+
+### Reference
+-  https://github.com/multimodallearning/pytorch-mask-rcnn
