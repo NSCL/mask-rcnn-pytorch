@@ -26,7 +26,11 @@ import visualize
 from nms.nms_wrapper import nms
 from roialign.roi_align.crop_and_resize import CropAndResizeFunction
 
+from imgaug.augmentables.segmaps import SegmentationMapsOnImage
 
+import imageio
+import imgaug as ia
+import cv2
 ############################################################
 #  Logging Utility Functions
 ############################################################
@@ -1172,7 +1176,14 @@ def load_image_gt(dataset, config, image_id, augment=False,
         max_dim=config.IMAGE_MAX_DIM,
         padding=config.IMAGE_PADDING)
     mask = utils.resize_mask(mask, scale, padding)
+    segmap = np.argmax(mask, axis=2)
+    segmap = segmap.astype(np.int32)
 
+    print("Shape:", segmap.shape, "min value:", segmap.min(), "max value:", segmap.max())
+    segmap = SegmentationMapsOnImage(segmap, shape=image.shape)
+    ia.imshow(segmap.draw_on_image(image)[0])
+    cv2.waitKey(0)
+    #print('mask',mask.shape)
     # Random horizontal flips.
     if augment:
         if random.randint(0, 1):
@@ -1393,6 +1404,10 @@ class Dataset(torch.utils.data.Dataset):
         gt_class_ids = torch.from_numpy(gt_class_ids)
         gt_boxes = torch.from_numpy(gt_boxes).float()
         gt_masks = torch.from_numpy(gt_masks.astype(int).transpose(2, 0, 1)).float()
+
+
+        #print('images',images.shape)
+        #print('type',gt_masks)
 
         return images, image_metas, rpn_match, rpn_bbox, gt_class_ids, gt_boxes, gt_masks
 
