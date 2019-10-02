@@ -78,9 +78,18 @@ if __name__ == '__main__':
 
     results = model.detect([image])
 
+
     # Visualize results
     matplotlib.use('TkAgg')
     r = results[0]
+   
+    print("BOX",r['rois'])
+    print("Class",r['class_ids'])
+    print("Scores",r['scores'])
+     
     visualize.display_instances(image, r['rois'], r['masks'], r['class_ids'],
                            class_names, r['scores'])
+
+    
+
     plt.show()
