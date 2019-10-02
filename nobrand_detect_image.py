@@ -1,4 +1,5 @@
 import os
+import time
 import sys
 import random
 import math
@@ -11,6 +12,7 @@ import coco
 import utils
 import model as modellib
 import visualize
+import cv2
 
 import torch
 import argparse
@@ -28,6 +30,10 @@ if __name__ == '__main__':
     parser.add_argument('--weights', required=False,
                         default="mask_rcnn_coco_0160.pth",
                         help="Path to weights .pth file or 'coco'")
+
+    parser.add_argument('--visualize', required=False,
+                        default="image",
+                        help="webcam or image")                    
 
     args = parser.parse_args()
 
@@ -70,26 +76,49 @@ if __name__ == '__main__':
     # the teddy bear class, use: class_names.index('teddy bear')
     class_names = ['BG','wet_tissue','food_wrap','steel_scourer']
 
+    
+    # load image 
+
+    if args.visualize == "image":
     # Load a random image from the images folder
-    file_names = next(os.walk(IMAGE_DIR))[2]
-    image = skimage.io.imread(os.path.join(IMAGE_DIR, random.choice(file_names)))
+        file_names = next(os.walk(IMAGE_DIR))[2]
+        image = skimage.io.imread(os.path.join(IMAGE_DIR, random.choice(file_names)))
 
-    # Run detection
-
-    results = model.detect([image])
+        results = model.detect([image])
 
 
-    # Visualize results
-    matplotlib.use('TkAgg')
-    r = results[0]
+        # Visualize results
+        matplotlib.use('TkAgg')
+        r = results[0]
    
-    print("BOX",r['rois'])
-    print("Class",r['class_ids'])
-    print("Scores",r['scores'])
+        print("BOX",r['rois'])
+        print("Class",r['class_ids'])
+        print("Scores",r['scores'])
      
-    visualize.display_instances(image, r['rois'], r['masks'], r['class_ids'],
-                           class_names, r['scores'])
+        visualize.display_image_instances(image, r['rois'], r['masks'], r['class_ids'],
+                               class_names, r['scores'])
 
     
 
-    plt.show()
+        plt.show()
+    
+    elif args.visualize == "webcam":
+        cam = cv2.VideoCapture(0)
+        frames = 0
+        start = time.time()   
+
+        while True:
+            #start_time = time.time()
+            ret_val, img = cam.read()
+            results = model.detect([img])
+            r = results[0]
+            image_results = visualize.display_webcam_instances(img, r['rois'], r['masks'], r['class_ids'], class_names, r['scores'])
+            #visualize.display_instances(img, r['rois'], r['masks'], r['class_ids'], class_names, r['scores'])
+            #plt.show()
+            cv2.imshow("detections", image_results)
+            if cv2.waitKey(1) == 27:
+                break
+            frames += 1
+            print("FPS of the video is {:5.2f}".format( frames / (time.time() - start)))
+        cv2.destroyAllWindows()
+   
