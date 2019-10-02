@@ -19,6 +19,8 @@ if "DISPLAY" not in os.environ:
 import matplotlib.patches as patches
 import matplotlib.lines as lines
 from matplotlib.patches import Polygon
+from PIL import Image
+
 
 import utils
 
@@ -107,6 +109,7 @@ def display_instances(image, boxes, masks, class_ids, class_names,
     ax.set_title(title)
 
     masked_image = image.astype(np.uint32).copy()
+
     for i in range(N):
         color = colors[i]
 
@@ -131,20 +134,44 @@ def display_instances(image, boxes, masks, class_ids, class_names,
 
         # Mask
         mask = masks[:, :, i]
+
+
+
+        print("     ")
+        print("check mask")
+        print(mask.shape)
+        
+        data_test = np.zeros((mask.shape[0], mask.shape[1], 3), dtype=np.uint8)
+        
+        (a, b) = np.nonzero(mask)
+        print(a)
+        
+        for i in range(len(a)):
+            data_test[a[i], b[i]] = [255,255,255]
+        
+        img = Image.fromarray(data_test)
+        img.show()
+
         masked_image = apply_mask(masked_image, mask, color)
 
         # Mask Polygon
         # Pad to ensure proper polygons for masks that touch image edges.
         padded_mask = np.zeros(
             (mask.shape[0] + 2, mask.shape[1] + 2), dtype=np.uint8)
+
         padded_mask[1:-1, 1:-1] = mask
+
         contours = find_contours(padded_mask, 0.5)
+
         for verts in contours:
             # Subtract the padding and flip (y, x) to (x, y)
             verts = np.fliplr(verts) - 1
             p = Polygon(verts, facecolor="none", edgecolor=color)
             ax.add_patch(p)
+
     ax.imshow(masked_image.astype(np.uint8))
+
+
     plt.show()
     
 
