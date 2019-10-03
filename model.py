@@ -30,6 +30,8 @@ from imgaug.augmentables.segmaps import SegmentationMapsOnImage
 
 import imageio
 import imgaug as ia
+import imgaug.augmenters as iaa
+
 import cv2
 ############################################################
 #  Logging Utility Functions
@@ -1176,19 +1178,40 @@ def load_image_gt(dataset, config, image_id, augment=False,
         max_dim=config.IMAGE_MAX_DIM,
         padding=config.IMAGE_PADDING)
     mask = utils.resize_mask(mask, scale, padding)
-    segmap = np.argmax(mask, axis=2)
-    segmap = segmap.astype(np.int32)
 
-    print("Shape:", segmap.shape, "min value:", segmap.min(), "max value:", segmap.max())
+    segmap = np.zeros(mask.shape[0:2])
+    for i in range(mask.shape[2]):
+        segmap += mask[:,:,i]*(i+1)
+    segmap = segmap.astype(np.int32)
     segmap = SegmentationMapsOnImage(segmap, shape=image.shape)
-    ia.imshow(segmap.draw_on_image(image)[0])
+
+    aug = iaa.Crop(px=(0, 0, 50, 200))  # (top, right, bottom, left)
+
+    aug_det = aug.to_deterministic()
+    image_aug = aug_det.augment_image(image)  # augment image
+    segmap_aug = aug_det.augment_segmentation_maps(segmap)  # augment normal-sized segmentation map
+
+    m = cv2.cvtColor(segmap_aug.draw_on_image(image_aug)[0], cv2.COLOR_BGR2RGB)
+    cv2.imshow('test',m)
     cv2.waitKey(0)
+
+    mask_seg = np.zeros(mask.shape)
+
+    for i in range(mask_seg.shape[-1]):
+        mask_ = segmap.get_arr() == i+1
+        mask_ = mask_.astype(np.int32)
+        mask_seg[:,:,i] = mask_
+
+    mask_seg = mask_seg.astype(np.int32)
+    
+    #cv2.imshow('test',m)
+    
     #print('mask',mask.shape)
     # Random horizontal flips.
-    if augment:
-        if random.randint(0, 1):
-            image = np.fliplr(image)
-            mask = np.fliplr(mask)
+    #if augment:
+    #    if random.randint(0, 1):
+    #        image = np.fliplr(image)
+    #        mask = np.fliplr(mask)
 
     # Bounding boxes. Note that some boxes might be all zeros
     # if the corresponding mask got cropped out.
@@ -1204,12 +1227,13 @@ def load_image_gt(dataset, config, image_id, augment=False,
 
     # Resize masks to smaller size to reduce memory usage
     if use_mini_mask:
-        mask = utils.minimize_mask(bbox, mask, config.MINI_MASK_SHAPE)
+        mask = utils.minimize_mask(bbox, mask_seg, config.MINI_MASK_SHAPE)
 
     # Image meta data
     image_meta = compose_image_meta(image_id, shape, window, active_class_ids)
 
-    return image, image_meta, class_ids, bbox, mask
+    
+    return image, image_meta, class_ids, bbox, mask_seg
 
 def build_rpn_targets(image_shape, anchors, gt_class_ids, gt_boxes, config):
     """Given the anchors and GT boxes, compute overlaps and identify positive
@@ -1373,7 +1397,6 @@ class Dataset(torch.utils.data.Dataset):
         image, image_metas, gt_class_ids, gt_boxes, gt_masks = \
             load_image_gt(self.dataset, self.config, image_id, augment=self.augment,
                           use_mini_mask=self.config.USE_MINI_MASK)
-
         # Skip images that have no instances. This can happen in cases
         # where we train on a subset of classes and the image doesn't
         # have any of the classes we care about.
