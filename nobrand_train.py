@@ -138,7 +138,7 @@ class CocoDataset(utils.Dataset):
             image_ids = list(set(image_ids))
         else:
             # All images
-            image_ids = list(coco.imgs.keys())
+            image_ids = list(coco.imgs.keys()) # ???
 
         # Add classes
         for i in class_ids:
@@ -153,6 +153,9 @@ class CocoDataset(utils.Dataset):
                 height=coco.imgs[i]["height"],
                 annotations=coco.loadAnns(coco.getAnnIds(
                     imgIds=[i], catIds=class_ids, iscrowd=None)))
+        
+        print(return_coco)
+
         if return_coco:
             return coco
 
@@ -417,6 +420,8 @@ if __name__ == '__main__':
         # validation set, as as in the Mask RCNN paper.
         dataset_train = CocoDataset()
         dataset_train.load_coco(args.dataset, "train")
+        
+        print(dataset_train)
 
         # ???왜 연속으로 두번있지?
         #ataset_train.load_coco(args.dataset, "valminusminival")
@@ -430,6 +435,7 @@ if __name__ == '__main__':
         # *** This training schedule is an example. Update to your needs ***
 
         # Training - Stage 1
+        
         print("Training network heads")
         model.train_model(dataset_train, dataset_val,
                     learning_rate=config.LEARNING_RATE,

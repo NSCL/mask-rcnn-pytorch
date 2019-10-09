@@ -10,7 +10,11 @@ Written by Waleed Abdulla
 import datetime
 import math
 import os
+
 import random
+from random import randint
+from random import uniform
+
 import re
 
 import numpy as np
@@ -26,6 +30,15 @@ import visualize
 from nms.nms_wrapper import nms
 from roialign.roi_align.crop_and_resize import CropAndResizeFunction
 
+from imgaug.augmentables.segmaps import SegmentationMapsOnImage
+
+
+import imageio
+import imgaug as ia
+import imgaug.augmenters as iaa
+
+import cv2
+from PIL import Image
 
 ############################################################
 #  Logging Utility Functions
@@ -1165,6 +1178,7 @@ def load_image_gt(dataset, config, image_id, augment=False,
     # Load image and mask
     image = dataset.load_image(image_id)
     mask, class_ids = dataset.load_mask(image_id)
+
     shape = image.shape
     image, window, scale, padding = utils.resize_image(
         image,
@@ -1173,16 +1187,105 @@ def load_image_gt(dataset, config, image_id, augment=False,
         padding=config.IMAGE_PADDING)
     mask = utils.resize_mask(mask, scale, padding)
 
+    ##print("image_shape",image.shape)
+    ##print("mask_shape", mask.shape)
+    
+
+    if augment:
+        #if random.randint(0, 1):
+            
+        segmap = np.zeros(mask.shape[0:2]) #mask size 0 map create
+
+        for i in range(mask.shape[2]): # mask.shape is classes in image
+            segmap += mask[:,:,i]*(i+1)
+        segmap = segmap.astype(np.int32)
+        segmap = SegmentationMapsOnImage(segmap, shape=mask.shape)
+
+        aug = iaa.Multiply(1) #need random (0.25~2)
+
+        if random.randint(0, 1):
+            aug = iaa.Crop(px=(randint(0,200), randint(0,200), randint(0,200), randint(0,200)))  # (top, right, bottom, left) #need
+        if random.randint(0, 1):
+            aug = iaa.Multiply(uniform(0.2,2)) #need random (0.25~2)
+        if random.randint(0, 1):
+            aug = iaa.Fliplr(1) #need random (0 or 1)
+        if random.randint(0, 1):
+            aug = iaa.Affine(rotate=randint(0, 200)) # random need
+        if random.randint(0, 1):
+            aug = iaa.PerspectiveTransform(scale=(uniform(0.1 ,0.2), uniform(0.2 ,0.35)))
+
+        aug_det = aug.to_deterministic()
+        image_aug = aug_det.augment_image(image)  # augment image
+        segmap_aug = aug_det.augment_segmentation_maps(segmap)  # augment normal-sized segmentation map
+
+        #m = cv2.cvtColor(segmap_aug.draw_on_image(image_aug)[0], cv2.COLOR_BGR2RGB)
+        #m_check = cv2.cvtColor(segmap_aug.draw()[0], cv2.COLOR_BGR2RGB) # check aug mask
+    
+        r_image = cv2.cvtColor(image_aug, cv2.COLOR_BGR2RGB) # check aug image
+
+        r_mask = segmap_aug
+
+        r_image, window, r_scale, r_padding = utils.resize_image( # resizing for crop
+            r_image,
+            min_dim=config.IMAGE_MAX_DIM,
+            max_dim=config.IMAGE_MAX_DIM,
+            padding=False)
+
+        padding_false = [(0, 0), (0, 0), (0, 0)]
+
+        mask_seg = np.zeros(r_mask.shape)
+
+        for i in range(mask_seg.shape[-1]):
+            mask_ = r_mask.get_arr() == i+1
+            mask_ = mask_.astype(np.int32)
+            mask_seg[:,:,i] = mask_
+
+        r_mask = mask_seg.astype(np.int32) 
+
+        r_mask = utils.resize_mask(r_mask, r_scale, padding_false)
+
+        ##print("r_image_shape ", r_image.shape)
+        ##print("r_mask_shape ", r_mask.shape)
+    
+        '''
+        # mask visualize 
+        data_test = np.zeros((r_mask.shape[0], r_mask.shape[1], 3), dtype=np.uint8)
+
+        (a, b) = np.nonzero(r_mask[:,:,0])
+
+        for i in range(len(a)):
+            data_test[a[i], b[i]] = [255,255,255]
+
+        bbox = utils.extract_bboxes(mask)
+
+        print("origion bbox",bbox)
+
+        image = r_image
+        mask = r_mask
+        
+        bbox = utils.extract_bboxes(mask)
+
+        print("aug bbox",bbox)
+
+
+        #cv2.imshow('image+mask',m)
+        cv2.imshow('image',r_image)
+        cv2.imshow('test',data_test)
+        cv2.waitKey(0)
+        '''
+    '''
     # Random horizontal flips.
     if augment:
         if random.randint(0, 1):
             image = np.fliplr(image)
             mask = np.fliplr(mask)
+    '''
 
     # Bounding boxes. Note that some boxes might be all zeros
     # if the corresponding mask got cropped out.
     # bbox: [num_instances, (y1, x1, y2, x2)]
     bbox = utils.extract_bboxes(mask)
+
 
     # Active classes
     # Different datasets have different classes, so track the
